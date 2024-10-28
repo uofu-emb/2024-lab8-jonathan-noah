@@ -34,3 +34,5 @@ foreach(PNAME transmit_can receive_can)
     add_custom_target(flash_${PNAME} picotool load -f $<TARGET_FILE:${PNAME}> DEPENDS ${PNAME})
 
 endforeach()
+
+target_compile_definitions(receive_can PUBLIC CAN_RECEIVER)

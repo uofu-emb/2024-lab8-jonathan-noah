@@ -5,15 +5,18 @@
 
 static struct can2040 cbus;
 
-static void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
-{
-    // Put your code here....
-}
+#ifdef CAN_RECEIVER
+void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg);
 
 static void PIOx_IRQHandler(void)
 {
     can2040_pio_irq_handler(&cbus);
 }
+#else
+int canbus_transmit(struct can2040_msg *msg) {
+    return can2040_transmit(&cbus, msg);
+}
+#endif
 
 void canbus_setup(void)
 {
@@ -23,12 +26,14 @@ void canbus_setup(void)
 
     // Setup canbus
     can2040_setup(&cbus, pio_num);
+#ifdef CAN_RECEIVER
     can2040_callback_config(&cbus, can2040_cb);
 
     // Enable irqs
     irq_set_exclusive_handler(PIO0_IRQ_0, PIOx_IRQHandler);
     irq_set_priority(PIO0_IRQ_0, PICO_DEFAULT_IRQ_PRIORITY - 1);
     irq_set_enabled(PIO0_IRQ_0, 1);
+#endif
 
     // Start canbus
     can2040_start(&cbus, sys_clock, bitrate, gpio_rx, gpio_tx);
