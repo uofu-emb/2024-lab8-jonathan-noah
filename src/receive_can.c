@@ -21,24 +21,20 @@ QueueHandle_t message_queue;
 
 void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
 {
-    xQueueSendToBack(message_queue, msg, 20);
+    xQueueSendToBackFromISR(message_queue, msg, NULL);
 }
 
 void main_task(__unused void *params) {
     struct can2040_msg msg;
-    char msg_buf[256];
-    int idx = 0;
 
     message_queue = xQueueCreate(100, sizeof(struct can2040_msg));
 
     for (;;) {
         if (xQueueReceive(message_queue, &msg, portMAX_DELAY) != pdTRUE) continue;
-        memcpy(msg.data, &msg_buf[idx], msg.dlc);
-        if (strlen(&msg_buf[idx]) < 8) {
-            printf("%s\n", msg_buf);
-            idx = 0;
-        }
-        else idx += msg.dlc;
+        char buf[9] = {0};
+        memcpy(msg.data, buf, msg.dlc);
+        printf(buf);
+        if (strlen(buf) < msg.dlc) printf("\n");
     }
 }
 
