@@ -5,6 +5,9 @@
 void canbus_setup(void);
 int canbus_transmit(struct can2040_msg *msg);
 
+void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
+{}
+
 int main( void )
 {
     int mid = 0;
