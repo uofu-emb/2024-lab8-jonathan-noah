@@ -14,7 +14,7 @@ QueueHandle_t message_queue = NULL;
 static void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
 {
     if (message_queue) {
-        xQueueSendToBackFromISR(message_queue, msg, NULL);
+        xQueueSendToBack(message_queue, msg, 10);
     }
 }
 
@@ -65,11 +65,11 @@ void receive_task(__unused void *params) {
 
     message_queue = xQueueCreate(100, sizeof(struct can2040_msg));
 
-    for (;;) {
+    for (int i = 0;; i++) {
         if (xQueueReceive(message_queue, &msg, portMAX_DELAY) != pdTRUE) continue;
         char buf[9] = {0};
         memcpy(msg.data, buf, msg.dlc);
-        printf(buf);
+        printf("Received packet %d: %s\n", i, buf);
         if (strlen(buf) < msg.dlc) printf("\n");
     }
 }
