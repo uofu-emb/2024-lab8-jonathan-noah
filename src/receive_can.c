@@ -17,11 +17,13 @@
 
 void canbus_setup(void);
 
-QueueHandle_t message_queue;
+QueueHandle_t message_queue = NULL;
 
 void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
 {
-    xQueueSendToBackFromISR(message_queue, msg, NULL);
+    if (message_queue) {
+        xQueueSendToBackFromISR(message_queue, msg, NULL);
+    }
 }
 
 void main_task(__unused void *params) {
