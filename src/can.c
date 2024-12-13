@@ -47,6 +47,12 @@ void transmit_task(__unused void *params) {
     struct can2040_msg msg;
     char msg_buf[256];
 
+#ifdef LOW_PRIORITY
+    msg.id = 0x7FF;
+#else
+    msg.id = 0;
+#endif
+
     for (;;) {
         sprintf(msg_buf, "This is message #%d.", mid++);
         size_t n = strlen(msg_buf) + 1;
@@ -56,7 +62,9 @@ void transmit_task(__unused void *params) {
             memcpy(msg.data, msg_buf + 8*i, msg.dlc);
             while (can2040_transmit(&cbus, &msg) < 0) sleep_ms(10);
         }
+#ifdef LOW_PRIORITY
         vTaskDelay(1000);
+#endif
     }
 }
 
