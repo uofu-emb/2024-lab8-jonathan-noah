@@ -52,18 +52,14 @@ void transmit_task(__unused void *params) {
 #else
     msg.id = 0;
 #endif
+    msg.dlc = 8;
 
     for (;;) {
-        sprintf(msg_buf, "This is message #%d.", mid++);
-        size_t n = strlen(msg_buf) + 1;
-        msg.dlc = 8;
-        // this may send a few extra bytes, but it's fine since the string is null-terminated
-        for (size_t i = 0; i <= n / 8; i++) {
-            memcpy(msg.data, msg_buf + 8*i, msg.dlc);
-            while (can2040_transmit(&cbus, &msg) < 0) sleep_ms(10);
-        }
+        can2040_transmit(&cbus, &msg);
 #ifdef LOW_PRIORITY
         vTaskDelay(1000);
+#else
+        busy_wait_us(TRANSMIT_DELAY_US);
 #endif
     }
 }
@@ -75,10 +71,9 @@ void receive_task(__unused void *params) {
 
     for (int i = 0;; i++) {
         if (xQueueReceive(message_queue, &msg, portMAX_DELAY) != pdTRUE) continue;
-        char buf[9] = {0};
-        memcpy(msg.data, buf, msg.dlc);
-        printf("Received packet %d: %s\n", i, buf);
-        if (strlen(buf) < msg.dlc) printf("\n");
+        if (msg.id != 0) {
+            printf("Low priority packet received @ %llu\n", time_us_64());
+        }
     }
 }
 
@@ -91,8 +86,10 @@ int main( void )
     TaskHandle_t rtask, ttask;
     xTaskCreate(transmit_task, "TransmitThread",
                 configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1UL, &ttask);
+#ifdef LOW_PRIORITY
     xTaskCreate(receive_task, "ReceiveThread",
                 configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2UL, &rtask);
+#endif
     vTaskStartScheduler();
     return 0;
 }

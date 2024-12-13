@@ -36,3 +36,4 @@ foreach(PNAME can_txrx_lp can_txrx_hp)
 endforeach()
 
 target_compile_definitions(can_txrx_lp PUBLIC LOW_PRIORITY)
+target_compile_definitions(can_txrx_hp PUBLIC TRANSMIT_DELAY_US=0)
