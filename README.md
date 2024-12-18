@@ -103,3 +103,14 @@ This activity will observe bus contention from a babbling node. "In a Controller
 1. Observe how often the lower priority message is actually transmitted and received.
 1. Introduce a short busy wait delay into the babbling node, slowly increase the duration until you observe the other messages consistently received.
 1. Document your observations in your repository.
+
+### Low Priority Reception Rates by Transmitter Delay
+
+| Busy Wait Delay (us) | Reception Rate |
+|   0                  |   0%           |
+| 100                  |   0%           |
+| 200                  |   0%           |
+| 210                  |   0%           |
+| 225                  | 100%           |
+| 250                  | 100%           |
+| 500                  | 100%           |

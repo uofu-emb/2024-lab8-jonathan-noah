@@ -3,11 +3,19 @@
 #include <stdio.h>
 #include <pico/stdlib.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+
 static struct can2040 cbus;
+
+QueueHandle_t message_queue = NULL;
 
 static void can2040_cb(struct can2040 *cd, uint32_t notify, struct can2040_msg *msg)
 {
-    // Put your code here....
+    if (message_queue) {
+        xQueueSendToBack(message_queue, msg, 10);
+    }
 }
 
 static void PIOx_IRQHandler(void)
@@ -15,7 +23,7 @@ static void PIOx_IRQHandler(void)
     can2040_pio_irq_handler(&cbus);
 }
 
-void canbus_setup(void)
+static void canbus_setup(void)
 {
     uint32_t pio_num = 0;
     uint32_t sys_clock = 125000000, bitrate = 500000;
@@ -32,4 +40,56 @@ void canbus_setup(void)
 
     // Start canbus
     can2040_start(&cbus, sys_clock, bitrate, gpio_rx, gpio_tx);
+}
+
+void transmit_task(__unused void *params) {
+    int mid = 0;
+    struct can2040_msg msg;
+    char msg_buf[256];
+
+#ifdef LOW_PRIORITY
+    msg.id = 0x7FF;
+#else
+    msg.id = 0;
+#endif
+    msg.dlc = 8;
+
+    for (;;) {
+        can2040_transmit(&cbus, &msg);
+#ifdef LOW_PRIORITY
+        vTaskDelay(1000);
+#else
+        busy_wait_us(TRANSMIT_DELAY_US);
+#endif
+    }
+}
+
+void receive_task(__unused void *params) {
+    struct can2040_msg msg;
+
+    message_queue = xQueueCreate(100, sizeof(struct can2040_msg));
+
+    for (int i = 0;; i++) {
+        if (xQueueReceive(message_queue, &msg, portMAX_DELAY) != pdTRUE) continue;
+        if (msg.id != 0) {
+            printf("Low priority packet received @ %llu\n", time_us_64());
+        }
+    }
+}
+
+int main( void )
+{
+    stdio_init_all();
+    canbus_setup();
+    const char *rtos_name;
+    rtos_name = "FreeRTOS";
+    TaskHandle_t rtask, ttask;
+    xTaskCreate(transmit_task, "TransmitThread",
+                configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1UL, &ttask);
+#ifdef LOW_PRIORITY
+    xTaskCreate(receive_task, "ReceiveThread",
+                configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2UL, &rtask);
+#endif
+    vTaskStartScheduler();
+    return 0;
 }

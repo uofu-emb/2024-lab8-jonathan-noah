@@ -1,6 +1,6 @@
-foreach(PNAME transmit_can receive_can)
+foreach(PNAME can_txrx_lp can_txrx_hp)
 
-    add_executable(${PNAME} ${PNAME}.c can.c)
+    add_executable(${PNAME} can.c)
 
     pico_set_program_name(${PNAME} "${PNAME}")
     pico_set_program_version(${PNAME} "0.1")
@@ -34,3 +34,6 @@ foreach(PNAME transmit_can receive_can)
     add_custom_target(flash_${PNAME} picotool load -f $<TARGET_FILE:${PNAME}> DEPENDS ${PNAME})
 
 endforeach()
+
+target_compile_definitions(can_txrx_lp PUBLIC LOW_PRIORITY)
+target_compile_definitions(can_txrx_hp PUBLIC TRANSMIT_DELAY_US=0)
